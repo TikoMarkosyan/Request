@@ -53,7 +53,8 @@ class OwnPromise {
     this.handlers.push(handlers);
     this.executeHandlers();
   }
-  static all =(val) =>{
+
+  static allSettled =(val) =>{
     return new OwnPromise((res, rej) => {
       let results = [];
       let completed = 0;
@@ -71,6 +72,75 @@ class OwnPromise {
 
     })
   }
+
+  static resolve = (val) =>{
+    return new OwnPromise((res,rej) => {
+        res(val);
+    })
+  }
+
+  static reject = (val) => {
+      return new OwnPromise((res,rej) => {
+        rej(val);
+    })
+  }
+
+  static any = (val) => {
+    return new OwnPromise((res, rej) => {
+      let error = [];
+      let resolved;
+      const onFULFILLED = (value) => {
+        
+        if (resolved) { return; }
+        resolved = true;
+        
+        res(value);
+      };
+      
+      const onREJECTED = (err) => {
+
+        if (resolved) { return; }
+
+        error = error.concat(err);
+
+        if (error.length === val.length) {
+          rej("AggregateError: No Promise in Promise.any was resolved");
+        }
+      };
+      
+      return val.forEach((el) => el.then(
+        onFULFILLED,
+        onREJECTED,
+      ));
+      
+    })
+  }
+
+  static race = (val) => {
+    return new OwnPromise((res, rej) => {
+      val.forEach(p =>  p.then(res, rej));
+    })
+  }
+
+  static all = (val) =>{
+    return new OwnPromise((res, rej) => {
+      let results = [];
+      let completed = 0;
+      val.forEach((value, index) => {
+        value.then(function (value) {
+          results[index] = value;
+          completed += 1;
+          if(completed === val.length) {
+            return res(results);
+          }
+        }).catch(function (error) {
+          return rej(error);
+        });  
+      })
+
+    })
+  }
+
   then(onSuccess,onFail){
     return new OwnPromise((res, rej) => {
       this.addHandlers({
@@ -98,9 +168,11 @@ class OwnPromise {
       })
     })
   }
+
   catch(onFail){
       this.then(null,onFail)
   }
+
   finally(callback){
     return new OwnPromise((res, rej) => {
       let val;
@@ -162,6 +234,7 @@ function ajax(url,config) {
   })
   return res;
 }
+
 ajax("https://jsonplaceholder.typicode.com/posts",{type:'GET',headers:{},data:{}}).then((res) => {
   console.log(res);
 }).catch(err => {
@@ -172,10 +245,39 @@ const res = new OwnPromise((res,rej) => {
 });
 res.then((res) => {
   console.log(res);
+}).finally(() => {
+  console.log("test")
 })
-const allres = OwnPromise.all([fetch('https://jsonplaceholder.typicode.com/posts'),
-fetch('https://jsonplaceholder.typicode.com/comments'),fetch('https://jsonplaceholder.typicode.com/photos')]).then(res => {
+
+const promise1 = new OwnPromise((resolve, reject) => {
+  setTimeout(resolve, 2000, 'one');
+});
+const promise3 = new OwnPromise((resolve, reject) => {
+  setTimeout(reject, 100, 'onee');
+});
+const promise2 = new OwnPromise((resolve, reject) => {
+  setTimeout(reject, 100, 'two');
+});
+/*
+const rune = Promise.race([promise1, promise2,promise3]).then(res => {
+  console.log("tisssko");
+  console.log(res);
+})*/
+/*
+const vre = OwnPromise.any([promise1, promise2,promise3]).then(res => {
   console.log(res);
 }).catch(err => {
   console.log(err)
-});
+}) */
+ /*
+const res = OwnPromise.race([promise1, promise2,promise3]).then(res => {
+  console.log("tiko");
+  console.log(res);
+}).catch(err => {
+  console.log("tidfsfko");
+  console.log(err)
+});*/
+
+const test = OwnPromise.resolve("tikoccc").then(res => {
+  console.log(res);
+})
